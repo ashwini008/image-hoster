@@ -49,6 +49,7 @@ public class ImageController {
     @RequestMapping("/images/{id}/{title}")
     public String showImage(@PathVariable("id") Integer id, @PathVariable("title") String title, Model model) {
         Image image = imageService.getImage(id);
+        model.addAttribute("comments", image.getComments());
         model.addAttribute("image", image);
         model.addAttribute("tags", image.getTags());
         return "images/image";
@@ -93,7 +94,7 @@ public class ImageController {
     //The method first needs to convert the list of all the tags to a string containing all the tags separated by a comma and then add this string in a Model type object
     //This string is then displayed by 'edit.html' file as previous tags of an image
     @RequestMapping(value = "/editImage")
-    public String editImage(@RequestParam("imageId") Integer imageId, Model model, HttpSession session, RedirectAttributes redirectAttributes) {
+    public String editImage(@RequestParam("imageId") Integer imageId, Model model, HttpSession session, RedirectAttributes redirectAttributes) throws IOException {
         Image image = imageService.getImage(imageId);
 
         // check if logged in user is trying to edit some other user's post
@@ -148,7 +149,7 @@ public class ImageController {
     //The method calls the deleteImage() method in the business logic passing the id of the image to be deleted
     //Looks for a controller method with request mapping of type '/images'
     @RequestMapping(value = "/deleteImage", method = RequestMethod.DELETE)
-    public String deleteImageSubmit(@RequestParam(name = "imageId") Integer imageId, HttpSession session, RedirectAttributes redirectAttributes) {
+    public String deleteImageSubmit(@RequestParam(name = "imageId") Integer imageId, HttpSession session, RedirectAttributes redirectAttributes) throws IOException {
         Image image = imageService.getImage(imageId);
 
         // check if logged in user is trying to delete some other user's post
@@ -205,7 +206,7 @@ public class ImageController {
     }
 
     // check if the user logged in is same as the one who uploaded the image
-    private Boolean isImgOwnerLogged(Image image, HttpSession session) {
+    private Boolean isImgOwnerLogged(Image image, HttpSession session) throws IOException {
         User user = (User) session.getAttribute("loggeduser");
         return image.getUser().getId() == user.getId();
     }
