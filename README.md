@@ -1,5 +1,8 @@
 # image-hoster
 
+This application helps users to view posts.
+It also enables members to upload posts and share comments on each post.
+
 ###### Features
 1. Bug fix - images with same title
 2. Bug fix - images non-actionable if user not uploaded
