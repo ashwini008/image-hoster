@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
@@ -92,13 +93,20 @@ public class ImageController {
     //The method first needs to convert the list of all the tags to a string containing all the tags separated by a comma and then add this string in a Model type object
     //This string is then displayed by 'edit.html' file as previous tags of an image
     @RequestMapping(value = "/editImage")
-    public String editImage(@RequestParam("imageId") Integer imageId, Model model) {
+    public String editImage(@RequestParam("imageId") Integer imageId, Model model, HttpSession session, RedirectAttributes redirectAttributes) {
         Image image = imageService.getImage(imageId);
 
-        String tags = convertTagsToString(image.getTags());
-        model.addAttribute("image", image);
-        model.addAttribute("tags", tags);
-        return "images/edit";
+        // check if logged in user is trying to edit some other user's post
+        if (isImgOwnerLogged(image, session)) {
+            String tags = convertTagsToString(image.getTags());
+            model.addAttribute("image", image);
+            model.addAttribute("tags", tags);
+            return "images/edit";
+        }
+        String error = "Only the owner of the image can edit the image";
+        redirectAttributes.addAttribute("editError", error).addFlashAttribute("editError", error);
+        return "redirect:images/" + imageId + "/" + image.getTitle();
+
     }
 
     //This controller method is called when the request pattern is of type 'images/edit' and also the incoming request is of PUT type
@@ -132,7 +140,7 @@ public class ImageController {
         updatedImage.setDate(new Date());
 
         imageService.updateImage(updatedImage);
-        return "redirect:/images/" + updatedImage.getTitle();
+        return "redirect:/images/" + imageId + "/" + updatedImage.getTitle();
     }
 
 
@@ -140,9 +148,17 @@ public class ImageController {
     //The method calls the deleteImage() method in the business logic passing the id of the image to be deleted
     //Looks for a controller method with request mapping of type '/images'
     @RequestMapping(value = "/deleteImage", method = RequestMethod.DELETE)
-    public String deleteImageSubmit(@RequestParam(name = "imageId") Integer imageId) {
-        imageService.deleteImage(imageId);
-        return "redirect:/images";
+    public String deleteImageSubmit(@RequestParam(name = "imageId") Integer imageId, HttpSession session, RedirectAttributes redirectAttributes) {
+        Image image = imageService.getImage(imageId);
+
+        // check if logged in user is trying to delete some other user's post
+        if (isImgOwnerLogged(image, session)) {
+            imageService.deleteImage(imageId);
+            return "redirect:/images";
+        }
+        String error = "Only the owner of the image can delete the image";
+        redirectAttributes.addAttribute("deleteError", error).addFlashAttribute("deleteError", error);
+        return "redirect:/images/" + imageId + "/" + image.getTitle();
     }
 
 
@@ -186,5 +202,11 @@ public class ImageController {
         tagString.append(lastTag.getName());
 
         return tagString.toString();
+    }
+
+    // check if the user logged in is same as the one who uploaded the image
+    private Boolean isImgOwnerLogged(Image image, HttpSession session) {
+        User user = (User) session.getAttribute("loggeduser");
+        return image.getUser().getId() == user.getId();
     }
 }
